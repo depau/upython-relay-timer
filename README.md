@@ -32,7 +32,9 @@ For ESP8266 boards with 512KB of flash such as the Sonoff Basic, you need to reb
 
 I created a patch that disables a few unused drivers, TLS supports (it's not very good anyway) and the WebREPL to reclaim some space, and adds the `uasyncio` module. You can use [rshell](https://github.com/dhylands/rshell) as a replacement for the WebREPL to edit the files.
 
-Building it is just a matter of running the following steps on GNU/Linux (requires `docker`, `git` and `esptool`):
+Building it is just a matter of running the following steps on GNU/Linux (requires `docker`, `git` and `esptool`).
+
+You can copy the script into the `ports/esp8266/modules` directory to pre-freeze it and include it in the firmware, but you need to reflash it every time you want to perform any changes.
 
 ```bash
 git clone https://github.com/micropython/micropython.git --recursive
@@ -53,6 +55,8 @@ esptool.py --port /dev/ttyUSBx --baud 460800 write_flash --flash_size=detect 0 p
 ```
 
 If you are using an ESP8266 with 1MB or more of flash, there's no need to create a custom build. If you're using an ESP32 with 512KB, you're on your own, read my patch and perform the same things on the ESP32 port.
+
+In short you can copy the 1MB build configurations, make it use the 512KB linker script and remove unnecessary modules such as NeoPixel driver, WebREPL, ussl (basic TLS implementation), etc.
 
 ## License
 
