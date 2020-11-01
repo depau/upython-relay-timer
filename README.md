@@ -50,7 +50,7 @@ esp make -j12 -C ports/esp8266 BOARD=GENERIC_SLIM
 
 ### Flashing on Sonoff Basic or ESP8266 with <= 512KB flash
 
-You can flash it to your Sonoff, if you built it yourself the firmware will be located at `ports/esp8266/build-GENERIC_SLIM/firmware-combined.bin`, otherwise you can use my build.
+If you built it yourself the firmware will be located at `ports/esp8266/build-GENERIC_SLIM/firmware-combined.bin`, otherwise you can use my build.
 
 Follow the official [MicroPython instructions](http://docs.micropython.org/en/latest/esp8266/tutorial/intro.html#deploying-the-firmware).
 
