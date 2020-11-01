@@ -1,0 +1,228 @@
+From e57c8961efc1eb518b3e6d20c85f897b8ce56ec7 Mon Sep 17 00:00:00 2001
+From: Davide Depau <davide@depau.eu>
+Date: Sun, 1 Nov 2020 16:57:05 +0100
+Subject: [PATCH] Slim ESP8266 with uasyncio built-in
+
+---
+ extmod/webrepl/manifest.py                    |  2 +-
+ ports/esp8266/Makefile                        |  4 +-
+ ports/esp8266/boards/GENERIC_SLIM/manifest.py | 26 +++++++++++++
+ .../boards/GENERIC_SLIM/mpconfigboard.h       | 23 +++++++++++
+ .../boards/GENERIC_SLIM/mpconfigboard.mk      |  9 +++++
+ ports/esp8266/modules/apa102.py               | 17 --------
+ ports/esp8266/modules/neopixel.py             | 31 ---------------
+ ports/esp8266/modules/ntptime.py              | 39 -------------------
+ 8 files changed, 61 insertions(+), 90 deletions(-)
+ create mode 100644 ports/esp8266/boards/GENERIC_SLIM/manifest.py
+ create mode 100644 ports/esp8266/boards/GENERIC_SLIM/mpconfigboard.h
+ create mode 100644 ports/esp8266/boards/GENERIC_SLIM/mpconfigboard.mk
+ delete mode 100644 ports/esp8266/modules/apa102.py
+ delete mode 100644 ports/esp8266/modules/neopixel.py
+ delete mode 100644 ports/esp8266/modules/ntptime.py
+
+diff --git a/extmod/webrepl/manifest.py b/extmod/webrepl/manifest.py
+index 6eceb3eeb..f73e1e460 100644
+--- a/extmod/webrepl/manifest.py
++++ b/extmod/webrepl/manifest.py
+@@ -1 +1 @@
+-freeze(".", ("webrepl.py", "webrepl_setup.py", "websocket_helper.py"))
++#freeze(".", ("webrepl.py", "webrepl_setup.py", "websocket_helper.py"))
+diff --git a/ports/esp8266/Makefile b/ports/esp8266/Makefile
+index 02ea05f76..3cdf2706d 100644
+--- a/ports/esp8266/Makefile
++++ b/ports/esp8266/Makefile
+@@ -21,8 +21,8 @@ QSTR_GLOBAL_DEPENDENCIES = $(BOARD_DIR)/mpconfigboard.h
+ 
+ # MicroPython feature configurations
+ MICROPY_ROM_TEXT_COMPRESSION ?= 1
+-MICROPY_PY_USSL = 1
+-MICROPY_SSL_AXTLS = 1
++MICROPY_PY_USSL = 0
++MICROPY_SSL_AXTLS = 0
+ AXTLS_DEFS_EXTRA = -Dabort=abort_ -DRT_MAX_PLAIN_LENGTH=1024 -DRT_EXTRA=4096
+ BTREE_DEFS_EXTRA = -DDEFPSIZE=1024 -DMINCACHE=3
+ 
+diff --git a/ports/esp8266/boards/GENERIC_SLIM/manifest.py b/ports/esp8266/boards/GENERIC_SLIM/manifest.py
+new file mode 100644
+index 000000000..1f2f8118a
+--- /dev/null
++++ b/ports/esp8266/boards/GENERIC_SLIM/manifest.py
+@@ -0,0 +1,26 @@
++# base modules
++#include("$(PORT_DIR)/boards/manifest.py")
++
++freeze("$(PORT_DIR)/modules")
++
++# uasyncio
++include("$(MPY_DIR)/extmod/uasyncio/manifest.py")
++
++freeze("$(MPY_LIB_DIR)/uasyncio/")
++
++# drivers
++#freeze("$(MPY_DIR)/drivers/display", "ssd1306.py")
++
++# Libraries from micropython-lib, include only if the library directory exists
++#if os.path.isdir(convert_path("$(MPY_LIB_DIR)")):
++#    pass
++    # file utilities
++    #freeze("$(MPY_LIB_DIR)/upysh", "upysh.py")
++
++    # requests
++    #freeze("$(MPY_LIB_DIR)/urequests", "urequests.py")
++    #freeze("$(MPY_LIB_DIR)/urllib.urequest", "urllib/urequest.py")
++
++    # umqtt
++    #freeze("$(MPY_LIB_DIR)/umqtt.simple", "umqtt/simple.py")
++    #freeze("$(MPY_LIB_DIR)/umqtt.robust", "umqtt/robust.py")
+diff --git a/ports/esp8266/boards/GENERIC_SLIM/mpconfigboard.h b/ports/esp8266/boards/GENERIC_SLIM/mpconfigboard.h
+new file mode 100644
+index 000000000..0cf671bfd
+--- /dev/null
++++ b/ports/esp8266/boards/GENERIC_SLIM/mpconfigboard.h
+@@ -0,0 +1,23 @@
++#define MICROPY_HW_BOARD_NAME "Sonoff Basic (1M, slim Depau)"
++#define MICROPY_HW_MCU_NAME "ESP8266"
++
++#define MICROPY_PERSISTENT_CODE_LOAD    (1)
++#define MICROPY_EMIT_XTENSA             (1)
++#define MICROPY_EMIT_INLINE_XTENSA      (1)
++
++#define MICROPY_DEBUG_PRINTERS          (1)
++#define MICROPY_ERROR_REPORTING         (MICROPY_ERROR_REPORTING_NORMAL)
++
++#define MICROPY_READER_VFS              (MICROPY_VFS)
++#define MICROPY_VFS                     (1)
++
++#define MICROPY_PY_BUILTINS_SLICE_ATTRS (1)
++#define MICROPY_PY_ALL_SPECIAL_METHODS  (1)
++#define MICROPY_PY_IO_FILEIO            (1)
++#define MICROPY_PY_SYS_STDIO_BUFFER     (1)
++#define MICROPY_PY_URE_SUB              (0)
++#define MICROPY_PY_UCRYPTOLIB           (0)
++#define MICROPY_PY_FRAMEBUF             (0)
++
++#define MICROPY_PY_UASYNCIO             (1)
++
+diff --git a/ports/esp8266/boards/GENERIC_SLIM/mpconfigboard.mk b/ports/esp8266/boards/GENERIC_SLIM/mpconfigboard.mk
+new file mode 100644
+index 000000000..7da4a459c
+--- /dev/null
++++ b/ports/esp8266/boards/GENERIC_SLIM/mpconfigboard.mk
+@@ -0,0 +1,9 @@
++LD_FILES = boards/esp8266_1m.ld
++
++MICROPY_PY_BTREE ?= 1
++MICROPY_VFS_LFS2 ?= 1
++
++MICROPY_PY_USSL = 0
++MICROPY_VFS_FAT = 0
++
++FROZEN_MANIFEST ?= $(BOARD_DIR)/manifest.py
+diff --git a/ports/esp8266/modules/apa102.py b/ports/esp8266/modules/apa102.py
+deleted file mode 100644
+index 41b7c0485..000000000
+--- a/ports/esp8266/modules/apa102.py
++++ /dev/null
+@@ -1,17 +0,0 @@
+-# APA102 driver for MicroPython on ESP8266
+-# MIT license; Copyright (c) 2016 Robert Foss, Daniel Busch
+-
+-from esp import apa102_write
+-from neopixel import NeoPixel
+-
+-
+-class APA102(NeoPixel):
+-    ORDER = (0, 1, 2, 3)
+-
+-    def __init__(self, clock_pin, data_pin, n, bpp=4):
+-        super().__init__(data_pin, n, bpp)
+-        self.clock_pin = clock_pin
+-        self.clock_pin.init(clock_pin.OUT)
+-
+-    def write(self):
+-        apa102_write(self.clock_pin, self.pin, self.buf)
+diff --git a/ports/esp8266/modules/neopixel.py b/ports/esp8266/modules/neopixel.py
+deleted file mode 100644
+index be56ed1b0..000000000
+--- a/ports/esp8266/modules/neopixel.py
++++ /dev/null
+@@ -1,31 +0,0 @@
+-# NeoPixel driver for MicroPython on ESP8266
+-# MIT license; Copyright (c) 2016 Damien P. George
+-
+-from esp import neopixel_write
+-
+-
+-class NeoPixel:
+-    ORDER = (1, 0, 2, 3)
+-
+-    def __init__(self, pin, n, bpp=3):
+-        self.pin = pin
+-        self.n = n
+-        self.bpp = bpp
+-        self.buf = bytearray(n * bpp)
+-        self.pin.init(pin.OUT)
+-
+-    def __setitem__(self, index, val):
+-        offset = index * self.bpp
+-        for i in range(self.bpp):
+-            self.buf[offset + self.ORDER[i]] = val[i]
+-
+-    def __getitem__(self, index):
+-        offset = index * self.bpp
+-        return tuple(self.buf[offset + self.ORDER[i]] for i in range(self.bpp))
+-
+-    def fill(self, color):
+-        for i in range(self.n):
+-            self[i] = color
+-
+-    def write(self):
+-        neopixel_write(self.pin, self.buf, True)
+diff --git a/ports/esp8266/modules/ntptime.py b/ports/esp8266/modules/ntptime.py
+deleted file mode 100644
+index dd07e46f1..000000000
+--- a/ports/esp8266/modules/ntptime.py
++++ /dev/null
+@@ -1,39 +0,0 @@
+-try:
+-    import usocket as socket
+-except:
+-    import socket
+-try:
+-    import ustruct as struct
+-except:
+-    import struct
+-
+-# (date(2000, 1, 1) - date(1900, 1, 1)).days * 24*60*60
+-NTP_DELTA = 3155673600
+-
+-# The NTP host can be configured at runtime by doing: ntptime.host = 'myhost.org'
+-host = "pool.ntp.org"
+-
+-
+-def time():
+-    NTP_QUERY = bytearray(48)
+-    NTP_QUERY[0] = 0x1B
+-    addr = socket.getaddrinfo(host, 123)[0][-1]
+-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+-    try:
+-        s.settimeout(1)
+-        res = s.sendto(NTP_QUERY, addr)
+-        msg = s.recv(48)
+-    finally:
+-        s.close()
+-    val = struct.unpack("!I", msg[40:44])[0]
+-    return val - NTP_DELTA
+-
+-
+-# There's currently no timezone support in MicroPython, and the RTC is set in UTC time.
+-def settime():
+-    t = time()
+-    import machine
+-    import utime
+-
+-    tm = utime.gmtime(t)
+-    machine.RTC().datetime((tm[0], tm[1], tm[2], tm[6] + 1, tm[3], tm[4], tm[5], 0))
+-- 
+2.29.1
+
